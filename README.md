@@ -89,6 +89,7 @@ open /Applications/MemoryPulse.app
 ## 🛠 Tech Stack & Architecture
 
 - **Language**: Swift 6 (Strict Concurrency & Sendable checks enabled)
+- **Supported Systems**: macOS 14.0+ (Apple Silicon M1/M2/M3/M4 & Intel x86_64)
 - **UI**: SwiftUI & AppKit hybrid (`NSHostingController` + `NSVisualEffectView`)
 - **Kernel APIs**:
   - Mach VM Subsystem: `host_statistics64` (`vm_statistics64_data_t`)
