@@ -104,7 +104,7 @@ open /Applications/MemoryPulse.app
 ## 👥 Contributors & Credits
 
 - [**Yoshi (@mak74ik)**](https://github.com/mak74ik) — Lead Creator, Systems Architecture & Core Engineering
-- **Antigravity** (Google DeepMind) — Pair Programming & Autonomous Systems Co-Author
+- [**Claude (@claude)**](https://github.com/claude) — Autonomous Pair Programming & Systems Architecture
 
 ---
 
