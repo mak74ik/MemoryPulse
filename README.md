@@ -1,7 +1,7 @@
 # MemoryPulse 
 
 <p align="center">
-  <img src="assets/icon_1024.png" width="128" height="128" alt="MemoryPulse App Icon" style="border-radius: 28px; box-shadow: 0 16px 32px rgba(0,0,0,0.4);">
+  <img src="assets/icon_1024.png" width="128" height="128" alt="MemoryPulse App Icon">
 </p>
 
 <p align="center">
