@@ -86,6 +86,18 @@ open /Applications/MemoryPulse.app
 
 ---
 
+## ⌨️ Shortcuts & Interaction
+
+| Action | Function |
+| :--- | :--- |
+| **Click Menu Bar Icon** | Opens real-time RAM breakdown & instant Purge popover |
+| **Sort Pills (`RAM`, `CPU`, `Name`)** | Cycles primary sort key with animated neon accent |
+| **Arrow Indicator (▲ / ▼)** | Inverts sort direction between Descending and Ascending |
+| **Scope Filters** | Switch between **Apps** (interactive GUI apps), **All**, and **Heavy** (>300 MB) |
+| **Kill Button (✕)** | Initiates process termination modal with "Don't ask again" option |
+
+---
+
 ## 🛠 Tech Stack & Architecture
 
 - **Language**: Swift 6 (Strict Concurrency & Sendable checks enabled)
