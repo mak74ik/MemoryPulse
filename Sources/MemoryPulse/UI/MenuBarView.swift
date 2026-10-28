@@ -158,8 +158,8 @@ public struct MenuBarView: View {
                 } else {
                     VStack(spacing: 2) {
                         ForEach(topHogs) { item in
-                            ProcessRowView(item: item, totalMemory: monitor.snapshot.totalBytes) { force in
-                                monitor.terminateProcess(pid: item.id, force: force)
+                            ProcessRowView(item: item, totalMemory: monitor.snapshot.totalBytes) {
+                                monitor.terminateProcess(pid: item.id, force: false)
                             }
                         }
                     }

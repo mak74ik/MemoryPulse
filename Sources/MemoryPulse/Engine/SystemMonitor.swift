@@ -11,9 +11,16 @@ public final class SystemMonitor: ObservableObject {
     @Published public var processes: [ProcessItem] = []
     @Published public var isRefreshing: Bool = false
     @Published public var lastPurgeFreedBytes: UInt64? = nil
+    @Published public var totalCpuUsage: Double = 0.0
 
     private var timer: Timer?
     private var lastCpuTimes: [pid_t: (time: UInt64, timestamp: Date)] = [:]
+    private var prevCpuTicks: (user: UInt32, sys: UInt32, idle: UInt32, nice: UInt32)?
+    private var timebase: mach_timebase_info = {
+        var tb = mach_timebase_info()
+        mach_timebase_info(&tb)
+        return tb
+    }()
 
     private init() {
         refreshAll()
@@ -35,8 +42,39 @@ public final class SystemMonitor: ObservableObject {
     }
 
     public func refreshAll() {
+        updateTotalCpu()
         snapshot = fetchMemorySnapshot()
         processes = fetchProcesses()
+    }
+
+    // MARK: - Total Host CPU Load
+    public func updateTotalCpu() {
+        var cpuLoad = host_cpu_load_info()
+        var count = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let kerr = withUnsafeMutablePointer(to: &cpuLoad) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, $0, &count)
+            }
+        }
+        guard kerr == KERN_SUCCESS else { return }
+
+        let user = cpuLoad.cpu_ticks.0
+        let sys = cpuLoad.cpu_ticks.1
+        let idle = cpuLoad.cpu_ticks.2
+        let nice = cpuLoad.cpu_ticks.3
+
+        if let prev = prevCpuTicks {
+            let deltaUser = user >= prev.user ? user - prev.user : 0
+            let deltaSys = sys >= prev.sys ? sys - prev.sys : 0
+            let deltaIdle = idle >= prev.idle ? idle - prev.idle : 0
+            let deltaNice = nice >= prev.nice ? nice - prev.nice : 0
+            let total = deltaUser + deltaSys + deltaIdle + deltaNice
+            if total > 0 {
+                let busy = deltaUser + deltaSys + deltaNice
+                totalCpuUsage = min(max((Double(busy) / Double(total)) * 100.0, 0.0), 100.0)
+            }
+        }
+        prevCpuTicks = (user, sys, idle, nice)
     }
 
     // MARK: - Darwin VM Memory Statistics
@@ -119,6 +157,7 @@ public final class SystemMonitor: ObservableObject {
 
         let now = Date()
         var currentCpuTimes: [pid_t: (time: UInt64, timestamp: Date)] = [:]
+        let cpuCoreCount = Double(max(1, ProcessInfo.processInfo.activeProcessorCount))
 
         for i in 0..<pidCount {
             let pid = pids[i]
@@ -133,14 +172,16 @@ public final class SystemMonitor: ObservableObject {
             // Filter out 0 byte or zombie entries
             if residentMemory == 0 { continue }
 
-            // CPU percentage calculation
+            // Precise Apple Silicon & Intel CPU percentage calculation
             let totalTime = taskInfo.pti_total_user + taskInfo.pti_total_system
             var cpuPct: Double = 0.0
             if let prev = lastCpuTimes[pid] {
-                let timeDelta = Double(totalTime.saturatingSubtract(prev.time)) / 1_000_000_000.0 // nanoseconds
+                let deltaTicks = totalTime > prev.time ? totalTime - prev.time : 0
+                let deltaNanos = Double(deltaTicks) * Double(timebase.numer) / Double(max(1, timebase.denom))
                 let wallDelta = now.timeIntervalSince(prev.timestamp)
-                if wallDelta > 0.001 {
-                    cpuPct = min(max((timeDelta / wallDelta) * 100.0, 0.0), 1000.0)
+                let wallNanos = wallDelta * 1_000_000_000.0
+                if wallNanos > 0 {
+                    cpuPct = min(max((deltaNanos / wallNanos) * 100.0, 0.0), 100.0 * cpuCoreCount)
                 }
             }
             currentCpuTimes[pid] = (time: totalTime, timestamp: now)
@@ -151,8 +192,8 @@ public final class SystemMonitor: ObservableObject {
             var isGUI = false
             var bundleId: String? = nil
             var appPath: String? = nil
-
             var arch: String? = nil
+
             if let app = appByPid[pid] {
                 isGUI = (app.activationPolicy == .regular)
                 name = app.localizedName ?? ""
@@ -240,11 +281,5 @@ public final class SystemMonitor: ObservableObject {
         }
         refreshAll()
         return closedCount
-    }
-}
-
-private extension UInt64 {
-    func saturatingSubtract(_ other: UInt64) -> UInt64 {
-        return self > other ? self - other : 0
     }
 }

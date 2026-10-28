@@ -22,7 +22,7 @@ public final class WindowManager: NSObject, NSWindowDelegate {
         let hostingController = NSHostingController(rootView: contentView)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 780, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 840, height: 580),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -35,7 +35,7 @@ public final class WindowManager: NSObject, NSWindowDelegate {
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
         window.backgroundColor = .clear
-        window.minSize = NSSize(width: 680, height: 460)
+        window.minSize = NSSize(width: 780, height: 500)
         window.delegate = self
 
         self.hudWindow = window
@@ -44,6 +44,6 @@ public final class WindowManager: NSObject, NSWindowDelegate {
     }
 
     public func windowWillClose(_ notification: Notification) {
-        // Keeps window reference clean or lets it reopen
+        // Keeps window reference clean
     }
 }

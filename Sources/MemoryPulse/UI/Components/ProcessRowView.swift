@@ -4,15 +4,15 @@ import SwiftUI
 public struct ProcessRowView: View {
     public let item: ProcessItem
     public let totalMemory: UInt64
-    public let onTerminate: (Bool) -> Void // Bool is force
+    public let onSelectTerminate: () -> Void
 
     @ObservedObject private var l10n = L10n.shared
     @State private var isHovering = false
 
-    public init(item: ProcessItem, totalMemory: UInt64, onTerminate: @escaping (Bool) -> Void) {
+    public init(item: ProcessItem, totalMemory: UInt64, onSelectTerminate: @escaping () -> Void) {
         self.item = item
         self.totalMemory = totalMemory
-        self.onTerminate = onTerminate
+        self.onSelectTerminate = onSelectTerminate
     }
 
     private var memoryFraction: Double {
@@ -27,23 +27,23 @@ public struct ProcessRowView: View {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 30, height: 30)
-                    .cornerRadius(7)
-                    .shadow(color: Color.black.opacity(0.18), radius: 3, y: 1.5)
+                    .frame(width: 28, height: 28)
+                    .cornerRadius(6.5)
+                    .shadow(color: Color.black.opacity(0.18), radius: 2.5, y: 1)
             } else {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    RoundedRectangle(cornerRadius: 6.5, style: .continuous)
                         .fill(Color.primary.opacity(0.06))
-                        .frame(width: 30, height: 30)
+                        .frame(width: 28, height: 28)
 
                     Image(systemName: item.isGUIApp ? "app.dashed" : "gearshape.2.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
             }
 
-            // Name & Architecture & PID
-            VStack(alignment: .leading, spacing: 3) {
+            // Name & Architecture & PID (Guaranteed no letter wrapping)
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(item.name)
                         .font(.system(size: 13, weight: .semibold))
@@ -54,19 +54,21 @@ public struct ProcessRowView: View {
                     if let arch = item.architecture {
                         Text(arch == "ARM64" ? " Silicon" : "Intel")
                             .font(.system(size: 8.5, weight: .bold))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(arch == "ARM64" ? Color.purple.opacity(0.15) : Color.orange.opacity(0.15))
+                            .lineLimit(1)
+                            .padding(.horizontal, 4.5)
+                            .padding(.vertical, 1)
+                            .background(arch == "ARM64" ? Color.purple.opacity(0.14) : Color.orange.opacity(0.14))
                             .foregroundColor(arch == "ARM64" ? Color.purple : Color.orange)
                             .cornerRadius(4)
                     }
 
                     if item.isGUIApp {
-                        Text(l10n.isRu ? "Приложение" : "App")
+                        Text(l10n.isRu ? "App" : "App")
                             .font(.system(size: 8.5, weight: .bold))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1.5)
-                            .background(Color.blue.opacity(0.14))
+                            .lineLimit(1)
+                            .padding(.horizontal, 4.5)
+                            .padding(.vertical, 1)
+                            .background(Color.blue.opacity(0.12))
                             .foregroundColor(.blue)
                             .cornerRadius(4)
                     }
@@ -75,7 +77,8 @@ public struct ProcessRowView: View {
                 HStack(spacing: 8) {
                     Text("PID: \(item.id)")
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(.secondary.opacity(0.8))
+                        .foregroundColor(.secondary.opacity(0.75))
+                        .lineLimit(1)
 
                     if let path = item.appPath {
                         Text(path)
@@ -86,38 +89,46 @@ public struct ProcessRowView: View {
                     }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 160, maxWidth: .infinity, alignment: .leading)
 
-            // CPU Badge
-            if item.cpuPercentage > 0.3 {
-                HStack(spacing: 3) {
+            // CPU Column (Always visible, accurately measured)
+            HStack(spacing: 3) {
+                if item.cpuPercentage >= 1.0 {
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 9))
-                    Text(String(format: "%.1f%%", item.cpuPercentage))
-                        .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 8.5))
                 }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(
-                    item.cpuPercentage > 15.0
-                        ? Color.red.opacity(0.15)
-                        : Color.orange.opacity(0.14)
-                )
-                .foregroundColor(item.cpuPercentage > 15.0 ? Color.red : Color.orange)
-                .cornerRadius(6)
-            }
 
-            // Memory Usage Progress & Value
+                Text(String(format: "%.1f%%", item.cpuPercentage))
+                    .font(.system(size: 11, weight: item.cpuPercentage >= 1.0 ? .bold : .regular, design: .rounded))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
+            .background(
+                item.cpuPercentage >= 15.0
+                    ? Color.red.opacity(0.15)
+                    : (item.cpuPercentage >= 1.0 ? Color.orange.opacity(0.14) : Color.clear)
+            )
+            .foregroundColor(
+                item.cpuPercentage >= 15.0
+                    ? Color.red
+                    : (item.cpuPercentage >= 1.0 ? Color.orange : Color.secondary.opacity(0.85))
+            )
+            .cornerRadius(5)
+            .frame(width: 75, alignment: .trailing)
+
+            // Memory Usage Column
             VStack(alignment: .trailing, spacing: 3) {
                 Text(item.formattedMemory)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
+                    .lineLimit(1)
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
                             .fill(Color.primary.opacity(0.08))
-                            .frame(height: 3.5)
+                            .frame(height: 3)
 
                         Capsule()
                             .fill(
@@ -127,57 +138,44 @@ public struct ProcessRowView: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .frame(width: max(geo.size.width * CGFloat(memoryFraction * 4.5), 3), height: 3.5)
+                            .frame(width: max(geo.size.width * CGFloat(memoryFraction * 4.5), 3), height: 3)
                     }
                 }
-                .frame(width: 64, height: 3.5)
+                .frame(width: 60, height: 3)
             }
-            .frame(width: 80, alignment: .trailing)
+            .frame(width: 85, alignment: .trailing)
 
-            // Action Buttons
-            HStack(spacing: 6) {
-                // Gentle Quit
+            // Action Column (Clear, unmistakable "Завершить" button)
+            HStack {
                 Button {
-                    onTerminate(false)
+                    onSelectTerminate()
                 } label: {
-                    Text(l10n.quitGentle)
-                        .font(.system(size: 11, weight: .medium))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Color.primary.opacity(0.06))
-                        .cornerRadius(6)
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(l10n.quitGentle)
+                            .font(.system(size: 11, weight: .medium))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.primary.opacity(0.06))
+                    .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .help(l10n.isRu ? "Завершить приложение штатно" : "Quit application gracefully")
-
-                // Force Quit
-                Button {
-                    onTerminate(true)
-                } label: {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color.red)
-                        .padding(5)
-                        .background(Color.red.opacity(0.12))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .help(l10n.forceQuit)
+                .help(l10n.isRu ? "Завершить процесс" : "Quit process")
             }
-            .opacity(isHovering ? 1.0 : 0.65)
+            .frame(width: 95, alignment: .trailing)
+            .opacity(isHovering ? 1.0 : 0.7)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(isHovering ? Color.primary.opacity(0.05) : Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(isHovering ? Color.primary.opacity(0.08) : Color.clear, lineWidth: 0.5)
-                )
         )
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(.easeInOut(duration: 0.12)) {
                 isHovering = hovering
             }
         }
@@ -210,15 +208,9 @@ public struct ProcessRowView: View {
             Divider()
 
             Button(role: .destructive) {
-                onTerminate(false)
+                onSelectTerminate()
             } label: {
                 Label(l10n.quitGentle, systemImage: "xmark.circle")
-            }
-
-            Button(role: .destructive) {
-                onTerminate(true)
-            } label: {
-                Label(l10n.forceQuit, systemImage: "bolt.fill")
             }
         }
     }
